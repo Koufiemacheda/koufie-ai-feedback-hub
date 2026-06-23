@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Koufie AI Analytics Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    :root {
+      --bg: #090b12;
+      --panel: rgba(20, 27, 45, 0.72);
+      --panel-solid: #141b2d;
+      --border: rgba(255, 255, 255, 0.08);
+      --gold: #d4af37;
+      --gold-soft: #f0d060;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --positive: #34d399;
+      --negative: #fb7185;
+      --accent: #60a5fa;
+      --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+      --radius: 22px;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    body {
+      background:
+        radial-gradient(circle at top left, rgba(212, 175, 55, 0.08), transparent 25%),
+        radial-gradient(circle at top right, rgba(96, 165, 250, 0.09), transparent 25%),
+        linear-gradient(180deg, #07080f, #0b1020 60%, #07080f);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    .container {
+      width: 95%;
+      max-width: 1450px;
+      margin: auto;
+      padding: 32px 20px 50px;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin-bottom: 30px;
+      padding: 24px 28px;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      backdrop-filter: blur(14px);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .header-left h1 {
+      font-size: 2.3rem;
+      line-height: 1.1;
+      background: linear-gradient(135deg, #f0d060, #d4af37, #e8a598);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .header-left p {
+      color: var(--muted);
+      margin-top: 10px;
+      font-size: 0.98rem;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .last-updated {
+      color: var(--muted);
+      font-size: 0.9rem;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border);
+    }
+
+    .refresh-btn {
+      background: linear-gradient(135deg, var(--gold-soft), var(--gold));
+      color: #111827;
+      border: none;
+      padding: 11px 18px;
+      border-radius: 999px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: 0.25s ease;
+      box-shadow: 0 6px 18px rgba(212, 175, 55, 0.25);
+    }
+
+    .refresh-btn:hover {
+      transform: translateY(-2px);
+      filter: brightness(1.05);
+    }
+
+    .top-bar {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+
+    .hero-panel,
+    .panel,
+    .card {
+      background: var(--panel);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .hero-panel {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-height: 180px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-panel::after {
+      content: "";
+      position: absolute;
+      inset: auto -60px -60px auto;
+      width: 180px;
+      height: 180px;
+      background: radial-gradient(circle, rgba(212, 175, 55, 0.16), transparent 70%);
+      border-radius: 50%;
+    }
+
+    .hero-panel h2 {
+      color: var(--text);
+      font-size: 1.5rem;
+      margin-bottom: 8px;
+    }
+
+    .hero-panel p {
+      color: var(--muted);
+      max-width: 680px;
+      line-height: 1.6;
+    }
+
+    .status-chip {
+      margin-top: 16px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      width: fit-content;
+      padding: 10px 14px;
+      background: rgba(52, 211, 153, 0.1);
+      color: var(--positive);
+      border: 1px solid rgba(52, 211, 153, 0.22);
+      border-radius: 999px;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .mini-summary {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 16px;
+    }
+
+    .mini-summary h3 {
+      color: var(--gold);
+      font-size: 1.1rem;
+    }
+
+    .summary-line {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: var(--muted);
+      font-size: 0.95rem;
+      border-bottom: 1px dashed rgba(255,255,255,0.08);
+      padding-bottom: 10px;
+    }
+
+    .summary-line strong {
+      color: var(--text);
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 22px;
+      margin-bottom: 28px;
+    }
+
+    .card {
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.25s ease, border-color 0.25s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-6px);
+      border-color: rgba(212, 175, 55, 0.25);
+    }
+
+    .card .label {
+      color: var(--muted);
+      font-size: 0.95rem;
+      margin-bottom: 12px;
+    }
+
+    .card .value {
+      font-size: 2.35rem;
+      font-weight: 800;
+      margin-bottom: 10px;
+    }
+
+    .card .subtext {
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+
+    .card.total .value { color: var(--text); }
+    .card.positive .value { color: var(--positive); }
+    .card.negative .value { color: var(--negative); }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 24px;
+      margin-bottom: 28px;
+    }
+
+    .panel {
+      padding: 24px;
+    }
+
+    .panel h2 {
+      color: var(--gold);
+      margin-bottom: 18px;
+      font-size: 1.15rem;
+    }
+
+    .chart-wrapper {
+      max-width: 360px;
+      margin: auto;
+    }
+
+    .insight-list {
+      display: grid;
+      gap: 18px;
+    }
+
+    .insight-item {
+      padding: 16px;
+      border-radius: 16px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .insight-item strong {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+
+    .big-number {
+      font-size: 1.8rem;
+      font-weight: 800;
+    }
+
+    .progress-group {
+      margin-top: 8px;
+    }
+
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .progress {
+      width: 100%;
+      height: 11px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      border-radius: 999px;
+    }
+
+    .progress-positive {
+      background: linear-gradient(90deg, #10b981, #34d399);
+    }
+
+    .progress-negative {
+      background: linear-gradient(90deg, #f43f5e, #fb7185);
+    }
+
+    .table-panel {
+      padding: 24px;
+    }
+
+    .table-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .table-header h2 {
+      color: var(--gold);
+      font-size: 1.15rem;
+    }
+
+    .feedback-table {
+      width: 100%;
+      border-collapse: collapse;
+      overflow: hidden;
+    }
+
+    .feedback-table th {
+      color: var(--gold);
+      text-align: left;
+      padding: 14px 12px;
+      border-bottom: 1px solid rgba(212,175,55,.2);
+      font-size: 0.92rem;
+      letter-spacing: 0.3px;
+    }
+
+    .feedback-table td {
+      padding: 14px 12px;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+      color: #e5e7eb;
+      vertical-align: top;
+    }
+
+    .feedback-table tr:hover {
+      background: rgba(255,255,255,.025);
+    }
+
+    .message-cell {
+      max-width: 480px;
+      color: #dbe3ee;
+      line-height: 1.45;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: .75rem;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+
+    .badge.positive {
+      background: rgba(52,211,153,.15);
+      color: var(--positive);
+    }
+
+    .badge.negative {
+      background: rgba(251,113,133,.15);
+      color: var(--negative);
+    }
+
+    .loading,
+    .empty-state,
+    .error-state {
+      text-align: center;
+      padding: 22px;
+      color: var(--muted);
+    }
+
+    .error-state {
+      color: #fca5a5;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 32px;
+      color: #6b7280;
+      font-size: 0.92rem;
+    }
+
+    @media (max-width: 1100px) {
+      .top-bar,
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .feedback-table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+      }
+
+      .header {
+        padding: 20px;
+      }
+
+      .header-left h1 {
+        font-size: 1.9rem;
+      }
+
+      .card .value {
+        font-size: 2rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <div class="header">
+      <div class="header-left">
+        <h1>☁️ Koufie AI Analytics Dashboard</h1>
+        <p>Real-Time Customer Feedback Intelligence Platform</p>
+      </div>
+
+      <div class="header-actions">
+        <div class="last-updated">Last updated: <span id="lastUpdated">--</span></div>
+        <button class="refresh-btn" onclick="loadDashboard(true)">↻ Refresh</button>
+      </div>
+    </div>
+
+    <div class="top-bar">
+      <div class="hero-panel">
+        <h2>Customer Sentiment at a Glance</h2>
+        <p>
+          Monitor live feedback performance, track sentiment trends, and quickly identify
+          customer satisfaction signals from your AWS-powered intelligence pipeline.
+        </p>
+        <div class="status-chip">● Live API Connected</div>
+      </div>
+
+      <div class="mini-summary">
+        <h3>Quick Overview</h3>
+        <div class="summary-line">
+          <span>Feedback Coverage</span>
+          <strong id="summaryCoverage">0 records</strong>
+        </div>
+        <div class="summary-line">
+          <span>Positive Ratio</span>
+          <strong id="summaryPositiveRatio">0%</strong>
+        </div>
+        <div class="summary-line">
+          <span>Negative Ratio</span>
+          <strong id="summaryNegativeRatio">0%</strong>
+        </div>
+      </div>
+    </div>
+
+    <div class="cards">
+      <div class="card total">
+        <div class="label">Total Feedback</div>
+        <div class="value" id="totalFeedback">0</div>
+        <div class="subtext">All customer feedback records received</div>
+      </div>
+
+      <div class="card positive">
+        <div class="label">Positive Feedback</div>
+        <div class="value" id="positiveFeedback">0</div>
+        <div class="subtext">Favorable customer responses detected</div>
+      </div>
+
+      <div class="card negative">
+        <div class="label">Negative Feedback</div>
+        <div class="value" id="negativeFeedback">0</div>
+        <div class="subtext">Issues or concerns requiring attention</div>
+      </div>
+    </div>
+
+    <div class="dashboard-grid">
+      <div class="panel">
+        <h2>📊 Sentiment Breakdown</h2>
+        <div class="chart-wrapper">
+          <canvas id="sentimentChart"></canvas>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>📈 AI Insights</h2>
+        <div class="insight-list">
+          <div class="insight-item">
+            <strong>Total Feedback</strong>
+            <div class="big-number" id="insightTotal">0</div>
+          </div>
+
+          <div class="insight-item">
+            <strong>Positive Feedback</strong>
+            <div class="big-number" id="insightPositive">0</div>
+            <div class="progress-group">
+              <div class="progress-label">
+                <span>Share of total</span>
+                <span id="positivePercentText">0%</span>
+              </div>
+              <div class="progress">
+                <div class="progress-bar progress-positive" id="positiveBar" style="width:0%"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="insight-item">
+            <strong>Negative Feedback</strong>
+            <div class="big-number" id="insightNegative">0</div>
+            <div class="progress-group">
+              <div class="progress-label">
+                <span>Share of total</span>
+                <span id="negativePercentText">0%</span>
+              </div>
+              <div class="progress">
+                <div class="progress-bar progress-negative" id="negativeBar" style="width:0%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel table-panel">
+      <div class="table-header">
+        <h2>📝 Recent Feedback</h2>
+        <div style="color: var(--muted); font-size: 0.9rem;">
+          Showing latest customer messages
+        </div>
+      </div>
+
+      <table class="feedback-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Sentiment</th>
+            <th>Message</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody id="feedbackTable">
+          <tr>
+            <td colspan="4" class="loading">Loading feedback...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="footer">
+      Powered by AWS Lambda • API Gateway • DynamoDB • Amazon Comprehend
+    </div>
+  </div>
+
+  <script>
+    const API_URL = "https://wtpede39o5.execute-api.us-east-1.amazonaws.com/stats";
+    let sentimentChartInstance = null;
+
+    function formatDate(dateString) {
+      if (!dateString) return "N/A";
+      return dateString.substring(0, 10);
+    }
+
+    function setLastUpdated() {
+      const now = new Date();
+      document.getElementById("lastUpdated").textContent = now.toLocaleString();
+    }
+
+    function escapeHTML(value) {
+      if (value == null) return "";
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function updateChart(positive, negative) {
+      const ctx = document.getElementById("sentimentChart");
+
+      if (sentimentChartInstance) {
+        sentimentChartInstance.destroy();
+      }
+
+      sentimentChartInstance = new Chart(ctx, {
+        type: "doughnut",
+        data: {
+          labels: ["Positive", "Negative"],
+          datasets: [{
+            data: [positive, negative],
+            backgroundColor: ["#34d399", "#fb7185"],
+            borderWidth: 0,
+            hoverOffset: 10
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          plugins: {
+            legend: {
+              position: "bottom",
+              labels: {
+                color: "white",
+                padding: 18
+              }
+            },
+            tooltip: {
+              backgroundColor: "#111827",
+              titleColor: "#fff",
+              bodyColor: "#e5e7eb",
+              borderColor: "rgba(255,255,255,0.08)",
+              borderWidth: 1
+            }
+          },
+          cutout: "68%"
+        }
+      });
+    }
+
+    async function loadDashboard(isManualRefresh = false) {
+      const table = document.getElementById("feedbackTable");
+
+      if (isManualRefresh) {
+        table.innerHTML = '<tr><td colspan="4" class="loading">Refreshing dashboard...</td></tr>';
+      }
+
+      try {
+        const response = await fetch(API_URL);
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        const total = data.total_feedback || 0;
+        const positive = data.sentiment_breakdown?.POSITIVE || 0;
+        const negative = data.sentiment_breakdown?.NEGATIVE || 0;
+
+        const positivePercent = total > 0 ? ((positive / total) * 100).toFixed(1) : 0;
+        const negativePercent = total > 0 ? ((negative / total) * 100).toFixed(1) : 0;
+
+        document.getElementById("totalFeedback").textContent = total;
+        document.getElementById("positiveFeedback").textContent = positive;
+        document.getElementById("negativeFeedback").textContent = negative;
+
+        document.getElementById("insightTotal").textContent = total;
+        document.getElementById("insightPositive").textContent = positive;
+        document.getElementById("insightNegative").textContent = negative;
+
+        document.getElementById("summaryCoverage").textContent = `${total} records`;
+        document.getElementById("summaryPositiveRatio").textContent = `${positivePercent}%`;
+        document.getElementById("summaryNegativeRatio").textContent = `${negativePercent}%`;
+
+        document.getElementById("positivePercentText").textContent = `${positivePercent}%`;
+        document.getElementById("negativePercentText").textContent = `${negativePercent}%`;
+
+        document.getElementById("positiveBar").style.width = `${positivePercent}%`;
+        document.getElementById("negativeBar").style.width = `${negativePercent}%`;
+
+        updateChart(positive, negative);
+
+        const recentFeedback =
+    data.feedback_history || [];
+
+        if (recentFeedback.length === 0) {
+          table.innerHTML = `
+            <tr>
+              <td colspan="4" class="empty-state">No recent feedback available.</td>
+            </tr>
+          `;
+        } else {
+          let rows = "";
+
+          recentFeedback.forEach(item => {
+            const sentiment = item.sentiment || "UNKNOWN";
+            const badgeClass = sentiment === "POSITIVE" ? "positive" : "negative";
+
+            rows += `
+              <tr>
+                <td>${escapeHTML(item.name || "Anonymous")}</td>
+                <td>
+                  <span class="badge ${badgeClass}">
+                    ${escapeHTML(sentiment)}
+                  </span>
+                </td>
+                <td class="message-cell">${escapeHTML(item.message || "")}</td>
+                <td>${escapeHTML(formatDate(item.submitted_at))}</td>
+              </tr>
+            `;
+          });
+
+          table.innerHTML = rows;
+        }
+
+        setLastUpdated();
+      } catch (error) {
+        console.error(error);
+        table.innerHTML = `
+          <tr>
+            <td colspan="4" class="error-state">
+              Failed to load dashboard data. Please try again.
+            </td>
+          </tr>
+        `;
+      }
+    }
+
+    loadDashboard();
+
+    setInterval(() => {
+      loadDashboard();
+    }, 60000);
+  </script>
+</body>
+</html>
+
+
+
+

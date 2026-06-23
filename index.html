@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Koufie AI Feedback Hub</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg:        #07080f;
+            --card:      rgba(10,12,22,0.94);
+            --surface:   rgba(255,255,255,0.04);
+            --surface2:  rgba(255,255,255,0.07);
+            --border:    rgba(212,175,55,0.14);
+            --border2:   rgba(212,175,55,0.32);
+            --gold:      #d4af37;
+            --gold-lt:   #f0d060;
+            --gold-dk:   #b8960c;
+            --rose-gold: #e8a598;
+            --teal:      #2dd4bf;
+            --emerald:   #34d399;
+            --rose:      #fb7185;
+            --amber:     #fbbf24;
+            --text:      #f0ece0;
+            --muted:     #5a5640;
+            --font:      'Plus Jakarta Sans', system-ui, sans-serif;
+            --ease:      cubic-bezier(0.22,1,0.36,1);
+        }
+
+        html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+
+        body {
+            font-family: var(--font);
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex; align-items: center; justify-content: center;
+            padding: 2rem 1rem;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* ── Background ── */
+        canvas#stars { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+
+        .grid-bg {
+            position: fixed; inset: 0; z-index: 0; pointer-events: none;
+            background-image:
+                linear-gradient(rgba(212,175,55,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(212,175,55,0.03) 1px, transparent 1px);
+            background-size: 44px 44px;
+            mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%);
+        }
+
+        .orb { position: fixed; border-radius: 50%; filter: blur(90px); pointer-events: none; z-index: 0; }
+        .orb-1 { width:480px;height:480px;background:rgba(212,175,55,0.1);  top:-160px;left:-140px; animation:orb 16s ease-in-out infinite alternate; }
+        .orb-2 { width:360px;height:360px;background:rgba(232,165,152,0.09); bottom:-100px;right:-100px; animation:orb 20s ease-in-out infinite alternate-reverse; }
+        .orb-3 { width:260px;height:260px;background:rgba(45,212,191,0.06);  top:45%;left:55%; animation:orb 13s ease-in-out infinite alternate; }
+
+        @keyframes orb { from{transform:translate(0,0) scale(1)} to{transform:translate(32px,42px) scale(1.1)} }
+
+        /* ── Layout ── */
+        .page-wrap {
+            position: relative; z-index: 1;
+            display: flex; flex-direction: column; align-items: center;
+            width: 100%; max-width: 540px;
+        }
+
+        /* ── Step indicator ── */
+        .steps {
+            display: flex; align-items: center;
+            margin-bottom: 1.8rem;
+        }
+
+        .step { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+
+        .step-dot {
+            width: 32px; height: 32px; border-radius: 50%;
+            border: 1.5px solid var(--border2);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.72rem; font-weight: 700;
+            color: var(--muted); background: var(--surface);
+            transition: all 0.4s var(--ease);
+        }
+
+        .step.active .step-dot {
+            border-color: var(--gold);
+            background: rgba(212,175,55,0.12);
+            color: var(--gold-lt);
+            box-shadow: 0 0 16px rgba(212,175,55,0.25);
+        }
+
+        .step.done .step-dot {
+            border-color: var(--emerald);
+            background: rgba(52,211,153,0.12);
+            color: var(--emerald);
+        }
+
+        .step-label {
+            font-size: 0.68rem; font-weight: 600;
+            color: var(--muted); letter-spacing: 0.06em;
+            text-transform: uppercase; transition: color 0.3s;
+        }
+
+        .step.active .step-label { color: var(--gold-lt); }
+        .step.done  .step-label  { color: var(--emerald); }
+
+        .step-line {
+            width: 70px; height: 1px;
+            background: var(--border2);
+            margin: 0 6px; margin-bottom: 22px;
+            position: relative; overflow: hidden;
+        }
+
+        .step-line-fill {
+            position: absolute; left: 0; top: 0; bottom: 0;
+            background: linear-gradient(90deg, var(--gold), var(--rose-gold));
+            width: 0%; transition: width 0.6s var(--ease);
+        }
+
+        /* ── Card ── */
+        .card {
+            width: 100%;
+            background: var(--card);
+            backdrop-filter: blur(28px);
+            border: 1px solid var(--border);
+            border-radius: 28px;
+            overflow: hidden;
+            position: relative;
+            box-shadow:
+                0 0 0 1px rgba(212,175,55,0.04),
+                0 40px 80px rgba(0,0,0,0.65),
+                inset 0 1px 0 rgba(212,175,55,0.08);
+        }
+
+        .card-glow {
+            height: 2px;
+            background: linear-gradient(90deg, transparent 0%, var(--gold-dk) 25%, var(--gold-lt) 50%, var(--rose-gold) 75%, transparent 100%);
+        }
+
+        .card-body { padding: 2.4rem 2.4rem 2rem; }
+
+        /* ── Header ── */
+        .header { text-align: center; margin-bottom: 2rem; }
+
+        .logo-wrap {
+            position: relative; width: 68px; height: 68px; margin: 0 auto 1.2rem;
+        }
+
+        .logo-ring {
+            width: 68px; height: 68px; border-radius: 50%;
+            background: linear-gradient(135deg, rgba(212,175,55,0.12), rgba(232,165,152,0.1));
+            border: 1px solid var(--border2);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.8rem;
+            animation: pulse-ring 3s ease-in-out infinite;
+        }
+
+        @keyframes pulse-ring {
+            0%,100% { box-shadow: 0 0 0 0 rgba(212,175,55,0.18); }
+            50%      { box-shadow: 0 0 0 10px rgba(212,175,55,0); }
+        }
+
+        .live-badge {
+            position: absolute; top: 2px; right: -2px;
+            background: var(--emerald); width: 14px; height: 14px;
+            border-radius: 50%; border: 2px solid var(--bg);
+            animation: live-pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes live-pulse {
+            0%,100% { box-shadow: 0 0 0 0 rgba(52,211,153,0.5); }
+            50%      { box-shadow: 0 0 0 5px rgba(52,211,153,0); }
+        }
+
+        .header h1 {
+            font-size: 1.5rem; font-weight: 800;
+            letter-spacing: -0.03em; line-height: 1.2;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, var(--gold-lt) 0%, var(--rose-gold) 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            font-size: 0.88rem; color: var(--muted); line-height: 1.6;
+            max-width: 340px; margin: 0 auto;
+        }
+
+        /* ── Star rating ── */
+        .rating-wrap {
+            margin-top: 1.2rem;
+            display: flex; flex-direction: column; align-items: center; gap: 6px;
+        }
+
+        .rating-label { font-size: 0.75rem; color: var(--muted); font-weight: 500; }
+
+        .stars { display: flex; gap: 6px; }
+
+        .star {
+            font-size: 1.5rem; cursor: pointer;
+            color: #2a2510;
+            transition: color 0.15s, transform 0.15s var(--ease);
+            user-select: none;
+        }
+
+        .star:hover, .star.hover { color: var(--gold-lt); transform: scale(1.2); }
+        .star.active { color: var(--gold); transform: scale(1.15); }
+
+        /* ── Divider ── */
+        .divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--border2), transparent);
+            margin: 1.6rem 0;
+        }
+
+        /* ── Form ── */
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .form-group { margin-bottom: 1.1rem; }
+
+        .field-label {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 6px;
+        }
+
+        label {
+            display: flex; align-items: center; gap: 6px;
+            font-size: 0.78rem; font-weight: 600;
+            color: var(--gold-lt);
+            text-transform: uppercase; letter-spacing: 0.08em;
+        }
+
+        .required-dot {
+            width: 5px; height: 5px; border-radius: 50%;
+            background: var(--rose-gold); flex-shrink: 0;
+        }
+
+        .field-error {
+            font-size: 0.72rem; color: var(--rose);
+            font-weight: 500; opacity: 0; transition: opacity 0.2s;
+        }
+
+        .field-error.show { opacity: 1; }
+
+        .input-wrap { position: relative; }
+
+        .input-icon {
+            position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+            font-size: 0.9rem; pointer-events: none;
+        }
+
+        .textarea-icon {
+            position: absolute; left: 12px; top: 14px; font-size: 0.9rem; pointer-events: none;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 0.8rem 1rem 0.8rem 2.4rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text);
+            font-family: var(--font);
+            font-size: 0.9rem; font-weight: 400;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+        }
+
+        input::placeholder, textarea::placeholder { color: #2e2a1a; }
+
+        input:hover:not(:focus), textarea:hover:not(:focus) {
+            border-color: var(--border2); background: var(--surface2);
+        }
+
+        input:focus, textarea:focus {
+            border-color: var(--gold);
+            background: rgba(212,175,55,0.04);
+            box-shadow: 0 0 0 3px rgba(212,175,55,0.1);
+        }
+
+        input.has-error, textarea.has-error {
+            border-color: var(--rose); box-shadow: 0 0 0 3px rgba(251,113,133,0.1);
+        }
+
+        input.valid { border-color: var(--emerald); }
+        textarea.valid { border-color: var(--emerald); }
+
+        textarea {
+            min-height: 130px; resize: vertical;
+            padding-top: 0.75rem; padding-left: 2.4rem;
+        }
+
+        .char-row { display: flex; justify-content: flex-end; margin-top: 4px; }
+
+        .char-counter {
+            font-size: 0.7rem; font-weight: 600; color: var(--muted); transition: color 0.2s;
+        }
+
+        .char-counter.warn   { color: var(--amber); }
+        .char-counter.danger { color: var(--rose); }
+
+        /* ── Submit button ── */
+        .submit-btn {
+            width: 100%; padding: 1rem; margin-top: 0.6rem;
+            background: linear-gradient(135deg, var(--gold-dk) 0%, var(--gold) 50%, var(--rose-gold) 100%);
+            border: none; border-radius: 12px;
+            color: #0c0a04; font-family: var(--font);
+            font-size: 0.95rem; font-weight: 800;
+            cursor: pointer; position: relative; overflow: hidden;
+            transition: transform 0.2s var(--ease), box-shadow 0.2s, opacity 0.2s;
+            box-shadow: 0 4px 24px rgba(212,175,55,0.35);
+            letter-spacing: 0.03em;
+        }
+
+        .submit-btn::after {
+            content: ""; position: absolute; inset: 0;
+            background: rgba(255,255,255,0.15); opacity: 0; transition: opacity 0.2s;
+        }
+
+        .submit-btn:hover:not(:disabled)::after { opacity: 1; }
+
+        .submit-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 32px rgba(212,175,55,0.5);
+        }
+
+        .submit-btn:active:not(:disabled) { transform: scale(0.98); }
+        .submit-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+        .btn-inner {
+            display: flex; align-items: center; justify-content: center;
+            gap: 8px; position: relative; z-index: 1;
+        }
+
+        .spinner {
+            display: none; width: 17px; height: 17px;
+            border: 2px solid rgba(0,0,0,0.2);
+            border-top-color: #0c0a04; border-radius: 50%;
+            animation: spin 0.65s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── Status ── */
+        #status {
+            margin-top: 1rem; padding: 0.85rem 1rem;
+            border-radius: 10px; font-size: 0.88rem; font-weight: 500;
+            text-align: center; display: none; line-height: 1.5;
+            animation: fadeUp 0.3s var(--ease) both;
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        #status.success {
+            display: block;
+            background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.28); color: var(--emerald);
+        }
+
+        #status.error {
+            display: block;
+            background: rgba(251,113,133,0.1); border: 1px solid rgba(251,113,133,0.28); color: var(--rose);
+        }
+
+        #status.loading {
+            display: block;
+            background: rgba(212,175,55,0.07); border: 1px solid var(--border); color: var(--gold-lt);
+        }
+
+        /* ── Card footer ── */
+        .card-footer {
+            padding: 1rem 2.4rem 1.6rem;
+            display: flex; align-items: center; justify-content: space-between;
+            border-top: 1px solid var(--border);
+        }
+
+        .footer-trust {
+            display: flex; align-items: center; gap: 6px;
+            font-size: 0.72rem; color: var(--muted); font-weight: 500;
+        }
+
+        .trust-dot {
+            width: 6px; height: 6px; border-radius: 50%; background: var(--emerald);
+            animation: live-pulse 2s ease-in-out infinite;
+        }
+
+        .footer-brand {
+            font-size: 0.72rem; color: #2a2510;
+            font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+        }
+
+        .footer-brand span { color: var(--gold); }
+
+        /* ── Success overlay ── */
+        .success-overlay {
+            display: none; position: absolute; inset: 0;
+            background: var(--card); border-radius: 28px;
+            flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; padding: 3rem 2rem;
+            animation: fadeUp 0.4s var(--ease) both; z-index: 10;
+        }
+
+        .success-overlay.show { display: flex; }
+
+        .success-icon {
+            width: 72px; height: 72px; border-radius: 50%;
+            background: rgba(212,175,55,0.1);
+            border: 1.5px solid rgba(212,175,55,0.4);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 2rem; margin-bottom: 1.2rem;
+            animation: pop 0.5s var(--ease) both;
+        }
+
+        @keyframes pop {
+            from { transform: scale(0.6); opacity: 0; }
+            to   { transform: scale(1); opacity: 1; }
+        }
+
+        .success-title {
+            font-size: 1.3rem; font-weight: 800; letter-spacing: -0.02em;
+            background: linear-gradient(135deg, var(--gold-lt), var(--rose-gold));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text; margin-bottom: 0.5rem;
+        }
+
+        .success-sub {
+            font-size: 0.9rem; color: var(--muted); line-height: 1.6;
+            max-width: 280px; margin-bottom: 0.8rem;
+        }
+
+        .sentiment-pill {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 6px 16px; border-radius: 999px;
+            background: rgba(212,175,55,0.1); border: 1px solid rgba(212,175,55,0.3);
+            font-size: 0.82rem; font-weight: 700; color: var(--gold-lt);
+            margin-bottom: 1.4rem;
+        }
+
+        .send-another {
+            padding: 0.65rem 1.6rem; border-radius: 999px;
+            background: var(--surface2); border: 1px solid var(--border2);
+            color: var(--gold-lt); font-family: var(--font);
+            font-size: 0.85rem; font-weight: 600;
+            cursor: pointer; transition: background 0.2s;
+        }
+
+        .send-another:hover { background: rgba(212,175,55,0.1); }
+
+        /* ── Responsive ── */
+        @media (max-width: 520px) {
+            .form-row { grid-template-columns: 1fr; }
+            .card-body { padding: 1.8rem 1.4rem 1.4rem; }
+            .card-footer { padding: 0.8rem 1.4rem 1.2rem; }
+            .step-line { width: 40px; }
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="stars"></canvas>
+    <div class="grid-bg"></div>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+
+    <div class="page-wrap">
+
+        <div class="steps">
+            <div class="step active" id="step1">
+                <div class="step-dot">1</div>
+                <div class="step-label">Details</div>
+            </div>
+            <div class="step-line"><div class="step-line-fill" id="line1"></div></div>
+            <div class="step" id="step2">
+                <div class="step-dot">2</div>
+                <div class="step-label">Feedback</div>
+            </div>
+            <div class="step-line"><div class="step-line-fill" id="line2"></div></div>
+            <div class="step" id="step3">
+                <div class="step-dot">✓</div>
+                <div class="step-label">Done</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-glow"></div>
+
+            <div class="success-overlay" id="successOverlay">
+                <div class="success-icon">🎉</div>
+                <div class="success-title">Feedback received!</div>
+                <div class="success-sub">Thank you, <strong id="successName"></strong>. We truly appreciate you taking the time to help us improve Koufie AI.</div>
+                <div class="sentiment-pill">✦ Sentiment: <span id="sentimentVal">—</span></div>
+                <button class="send-another" onclick="resetForm()">↩ Send another response</button>
+            </div>
+
+            <div class="card-body" id="cardBody">
+
+                <div class="header">
+                    <div class="logo-wrap">
+                        <div class="logo-ring">☁️</div>
+                        <div class="live-badge" title="Service live"></div>
+                    </div>
+                    <h1>Koufie AI Feedback Hub</h1>
+                    <p>Your experience shapes our product. Tell us what you think — every word counts.</p>
+
+                    <div class="rating-wrap">
+                        <div class="rating-label">How would you rate your experience?</div>
+                        <div class="stars" id="starRow" role="group" aria-label="Star rating">
+                            <span class="star" data-val="1" role="radio" aria-label="1 star" tabindex="0">★</span>
+                            <span class="star" data-val="2" role="radio" aria-label="2 stars" tabindex="0">★</span>
+                            <span class="star" data-val="3" role="radio" aria-label="3 stars" tabindex="0">★</span>
+                            <span class="star" data-val="4" role="radio" aria-label="4 stars" tabindex="0">★</span>
+                            <span class="star" data-val="5" role="radio" aria-label="5 stars" tabindex="0">★</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="divider"></div>
+
+                <form id="feedback-form" novalidate autocomplete="off">
+                    <input type="text" name="honeypot" style="display:none" tabindex="-1" autocomplete="off"/>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <div class="field-label">
+                                <label for="name">
+                                    <span>👤</span> Name
+                                    <span class="required-dot"></span>
+                                </label>
+                                <span class="field-error" id="nameErr">Required</span>
+                            </div>
+                            <div class="input-wrap">
+                                <span class="input-icon">✏️</span>
+                                <input type="text" id="name" placeholder="Your full name" maxlength="80" autocomplete="name"/>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="field-label">
+                                <label for="email">
+                                    <span>✉️</span> Email
+                                    <span class="required-dot"></span>
+                                </label>
+                                <span class="field-error" id="emailErr">Invalid email</span>
+                            </div>
+                            <div class="input-wrap">
+                                <span class="input-icon">📧</span>
+                                <input type="email" id="email" placeholder="you@email.com" maxlength="120" autocomplete="email"/>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="field-label">
+                            <label for="message">
+                                <span>💬</span> Your Feedback
+                                <span class="required-dot"></span>
+                            </label>
+                            <span class="field-error" id="msgErr">Min 10 characters</span>
+                        </div>
+                        <div class="input-wrap">
+                            <span class="textarea-icon">📝</span>
+                            <textarea id="message" placeholder="Share your thoughts, ideas, or issues in detail…" maxlength="1000"></textarea>
+                        </div>
+                        <div class="char-row">
+                            <span class="char-counter" id="charCounter">0 / 1000</span>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="submit-btn" id="submitBtn">
+                        <div class="btn-inner">
+                            <div class="spinner" id="spinner"></div>
+                            <span id="btnText">Send Feedback →</span>
+                        </div>
+                    </button>
+
+                    <div id="status"></div>
+                </form>
+            </div>
+
+            <div class="card-footer">
+                <div class="footer-trust">
+                    <div class="trust-dot"></div>
+                    Encrypted &amp; secure
+                </div>
+                <div class="footer-brand">Powered by <span>Koufie AI</span></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "https://wtpede39o5.execute-api.us-east-1.amazonaws.com/feedback";
+
+        // ── Stars ──
+        let rating = 0;
+        const starEls = document.querySelectorAll('.star');
+
+        function paintStars(val) {
+            starEls.forEach(s => {
+                const v = +s.dataset.val;
+                s.classList.toggle('active', v <= val);
+                s.classList.remove('hover');
+            });
+        }
+
+        starEls.forEach(s => {
+            s.addEventListener('click', () => { rating = +s.dataset.val; paintStars(rating); });
+            s.addEventListener('mouseenter', () => {
+                const v = +s.dataset.val;
+                starEls.forEach(x => x.classList.toggle('hover', +x.dataset.val <= v));
+            });
+            s.addEventListener('keydown', e => {
+                if (e.key === 'Enter' || e.key === ' ') { rating = +s.dataset.val; paintStars(rating); }
+            });
+        });
+
+        document.getElementById('starRow').addEventListener('mouseleave', () => {
+            starEls.forEach(s => s.classList.remove('hover'));
+            paintStars(rating);
+        });
+
+        // ── Char counter ──
+        const msgEl   = document.getElementById('message');
+        const counter = document.getElementById('charCounter');
+
+        msgEl.addEventListener('input', () => {
+            const n = msgEl.value.length;
+            counter.textContent = `${n} / 1000`;
+            counter.className = 'char-counter' + (n > 900 ? ' danger' : n > 700 ? ' warn' : '');
+            if (n >= 10) clearErr('message', 'msgErr');
+            updateStep();
+        });
+
+        // ── Live validation ──
+        document.getElementById('name').addEventListener('blur', () => {
+            const el = document.getElementById('name');
+            if (el.value.trim()) { el.classList.add('valid'); clearErr('name','nameErr'); }
+            else { el.classList.remove('valid'); showErr('name','nameErr','Required'); }
+        });
+
+        document.getElementById('name').addEventListener('input', updateStep);
+        document.getElementById('email').addEventListener('input', updateStep);
+
+        document.getElementById('email').addEventListener('blur', () => {
+            const el = document.getElementById('email');
+            if (isValidEmail(el.value.trim())) { el.classList.add('valid'); clearErr('email','emailErr'); }
+            else { el.classList.remove('valid'); showErr('email','emailErr','Invalid email'); }
+        });
+
+        // ── Steps ──
+        function setStep(n) {
+            ['step1','step2','step3'].forEach((id, i) => {
+                const el = document.getElementById(id);
+                el.classList.remove('active','done');
+                if (i + 1 < n) el.classList.add('done');
+                if (i + 1 === n) el.classList.add('active');
+            });
+            document.getElementById('line1').style.width = n > 1 ? '100%' : '0%';
+            document.getElementById('line2').style.width = n > 2 ? '100%' : '0%';
+        }
+
+        function updateStep() {
+            const name  = document.getElementById('name').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const msg   = msgEl.value.trim();
+            if (msg.length >= 10) setStep(3);
+            else if (name && isValidEmail(email)) setStep(2);
+            else setStep(1);
+        }
+
+        // ── Helpers ──
+        function isValidEmail(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e); }
+
+        function showErr(fieldId, errId, msg) {
+            document.getElementById(fieldId).classList.add('has-error');
+            document.getElementById(fieldId).classList.remove('valid');
+            const e = document.getElementById(errId);
+            e.textContent = msg; e.classList.add('show');
+        }
+
+        function clearErr(fieldId, errId) {
+            document.getElementById(fieldId).classList.remove('has-error');
+            document.getElementById(errId).classList.remove('show');
+        }
+
+        function setStatus(msg, type) {
+            const s = document.getElementById('status');
+            s.textContent = msg; s.className = type;
+        }
+
+        function setLoading(on) {
+            document.getElementById('submitBtn').disabled = on;
+            document.getElementById('spinner').style.display = on ? 'block' : 'none';
+            document.getElementById('btnText').textContent = on ? 'Sending…' : 'Send Feedback →';
+        }
+
+        // ── Submit ──
+        document.getElementById('feedback-form').addEventListener('submit', async e => {
+            e.preventDefault();
+            if (document.querySelector('[name="honeypot"]').value) return;
+
+            const name    = document.getElementById('name').value.trim();
+            const email   = document.getElementById('email').value.trim();
+            const message = msgEl.value.trim();
+
+            let valid = true;
+            if (!name)                 { showErr('name','nameErr','Required'); valid = false; }
+            if (!isValidEmail(email))  { showErr('email','emailErr','Invalid email'); valid = false; }
+            if (message.length < 10)   { showErr('message','msgErr','Min 10 characters'); valid = false; }
+            if (!valid) return;
+
+            setLoading(true);
+            setStatus('Sending your feedback…', 'loading');
+
+            try {
+                const res = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email, message, rating })
+                });
+
+                const result = await res.json();
+
+                if (res.ok) {
+                    document.getElementById('status').style.display = 'none';
+                    document.getElementById('successName').textContent = name;
+                    document.getElementById('sentimentVal').textContent = result.sentiment || 'Analyzed';
+                    document.getElementById('successOverlay').classList.add('show');
+                    setStep(3);
+                } else {
+                    setStatus('❌ Submission failed. Please try again.', 'error');
+                }
+            } catch (err) {
+                setStatus('❌ Connection error. Please check your network.', 'error');
+                console.error(err);
+            } finally {
+                setLoading(false);
+            }
+        });
+
+        // ── Reset ──
+        function resetForm() {
+            document.getElementById('feedback-form').reset();
+            document.getElementById('successOverlay').classList.remove('show');
+            document.getElementById('status').className = '';
+            document.getElementById('status').textContent = '';
+            counter.textContent = '0 / 1000';
+            counter.className = 'char-counter';
+            rating = 0; paintStars(0);
+            ['name','email','message'].forEach(id => {
+                document.getElementById(id).classList.remove('valid','has-error');
+            });
+            setStep(1);
+        }
+
+        // ── Particle stars ──
+        (function() {
+            const canvas = document.getElementById('stars');
+            const ctx = canvas.getContext('2d');
+            let W, H, pts = [];
+
+            function resize() {
+                W = canvas.width  = window.innerWidth;
+                H = canvas.height = window.innerHeight;
+            }
+            resize();
+            window.addEventListener('resize', resize);
+
+            for (let i = 0; i < 80; i++) {
+                pts.push({
+                    x: Math.random() * window.innerWidth,
+                    y: Math.random() * window.innerHeight,
+                    r: Math.random() * 1.1 + 0.3,
+                    dx: (Math.random() - 0.5) * 0.16,
+                    dy: (Math.random() - 0.5) * 0.16,
+                    o: Math.random() * 0.3 + 0.08
+                });
+            }
+
+            function draw() {
+                ctx.clearRect(0, 0, W, H);
+                pts.forEach(p => {
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(240,208,96,${p.o})`;
+                    ctx.fill();
+                    p.x += p.dx; p.y += p.dy;
+                    if (p.x < 0 || p.x > W) p.dx *= -1;
+                    if (p.y < 0 || p.y > H) p.dy *= -1;
+                });
+                requestAnimationFrame(draw);
+            }
+            draw();
+        })();
+    </script>
+</body>
+</html>
